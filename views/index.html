@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <style>
+        /* CSS Styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #5cb85c;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        li:last-child {
+            border-bottom: none;
+        }
+        .task-completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .delete-btn {
+            background-color: #d9534f;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background-color: #c9302c;
+        }
+        .update-btn {
+            background-color: #5bc0de;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .update-btn:hover {
+            background-color: #31b0d5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>To-Do List</h1>
+        <form id="task-form">
+            <input type="text" id="task-input" placeholder="New Task" required />
+            <button type="submit">Add Task</button>
+        </form>
+        <ul id="task-list">
+            <!-- Tasks will be dynamically inserted here -->
+        </ul>
+    </div>
+
+    <script>
+        // JavaScript to handle task actions
+        document.addEventListener('DOMContentLoaded', () => {
+            const taskForm = document.getElementById('task-form');
+            const taskInput = document.getElementById('task-input');
+            const taskList = document.getElementById('task-list');
+
+            taskForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const title = taskInput.value.trim();
+                if (title) {
+                    const newTask = await addTaskToDatabase(title);
+                    addTaskToList(newTask);
+                    taskInput.value = '';
+                }
+            });
+
+            async function fetchTasks() {
+                const res = await fetch('/tasks');
+                const tasks = await res.json();
+                tasks.forEach(addTaskToList);
+            }
+
+            async function addTaskToDatabase(title) {
+                const res = await fetch('/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title })
+                });
+                return await res.json(); // Assuming the response includes the new task with an id
+            }
+
+            function addTaskToList(task) {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span class="${task.completed ? 'task-completed' : ''}">
+                        ${task.title}
+                    </span>
+                    <div>
+                        <button class="update-btn" onclick="updateTask(${task.id}, this)">Update</button>
+                        <button class="delete-btn" onclick="deleteTask(${task.id}, this)">Delete</button>
+                    </div>
+                `;
+                taskList.appendChild(li);
+            }
+
+            window.deleteTask = async (id, button) => {
+                await fetch(`/tasks/${id}`, { method: 'DELETE' });
+                button.parentElement.parentElement.remove();
+            };
+
+            window.updateTask = async (id, button) => {
+                const updatedTitle = prompt("Update Task Title:");
+                if (updatedTitle) {
+                    await fetch(`/tasks/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: updatedTitle })
+                    });
+                    button.parentElement.previousElementSibling.textContent = updatedTitle;
+                }
+            };
+          
+            fetchTasks();
+        });
+    </script>
+</body>
+</html>
